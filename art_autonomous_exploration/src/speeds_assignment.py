@@ -71,71 +71,27 @@ class RobotController:
       ############################### NOTE QUESTION ############################
       # Check what laser_scan contains and create linear and angular speeds
       # for obstacle avoidance
-      MAX_SPEED = 0.3
-      MAX_DISTANCE = 5
-      TWIST_SENSITIVITY = 0.7 # ratio
-      EQUILIBRIUM = 0.06
 
-      span = len(scan)
+      # Linear and rotational correction
+      linear = 0
+      angular = 0
+      angle_resolution = (3 * math.pi / 2) / len(scan) # Angle between two scans
+      angle_min = -120 * math.pi / 180 # Minimum angle robot can see is 270 degrees
 
-      front_obst = 0
-      for i in scan[4*span/10 : 6*span/10]:
-          front_obst += i
-      front_obst /= (6*span/10 - 4*span/10) # avg
-      #front_obst = MAX_SPEED * front_obst / MAX_DISTANCE  # normalization
+      for i in range(0,len(scan)):
 
+          theta = angle_min + i * angle_resolution
+          linear -= math.cos(theta) / scan[i]**2
+          angular -= math.sin(theta) / scan[i]**2
 
-      left_obst = 0
-      for i in scan[6*span/10 : 7*span/10]:
-          left_obst += i
-      left_obst /= span/10
-      left_obst = MAX_SPEED * left_obst / MAX_DISTANCE  # normalization
+      # Average values
+      linear = 0.4 + linear / len(scan)
+      angular = angular / len(scan)
 
-      right_obst = 0
-      for i in scan[3*span/10 : 4*span/10]:
-          right_obst += i
-      right_obst /= span/10
-      right_obst = MAX_SPEED * right_obst / MAX_DISTANCE  # normalization
+      # Normalization of velocities
+      linear = min(max(linear, -0.3), 0.3)
+      angular = min(max(angular, -0.3), 0.3)
 
-      r_angular = MAX_SPEED - left_obst
-      l_angular = MAX_SPEED - right_obst
-
-      angular = (l_angular - r_angular) * TWIST_SENSITIVITY  # insert bias -> increase twisting sensitivity
-
-      # print r_angular , l_angular
-      #if front_obst < 1 :
-      linear = front_obst ** 1.2
-      linear = MAX_SPEED * linear / MAX_DISTANCE ** 1.2 # normalization
-      #else:
-      #linear = front_obst
-      #linear = MAX_SPEED * linear / MAX_DISTANCE
-      #print front_obst, linear
-
-      if linear > MAX_SPEED :
-          linear = MAX_SPEED
-      if linear < -MAX_SPEED :
-          linear = -MAX_SPEED
-
-
-      if angular > MAX_SPEED :
-          angular = MAX_SPEED
-      if angular < -MAX_SPEED :
-          angular = -MAX_SPEED
-
-      # APPLY FORCE TO ESCAPE LOCAL MINIMUM
-      if linear <= EQUILIBRIUM:
-          angular = MAX_SPEED
-
-      # RANDOM VALUE GENERATOR IN ORDER TO
-      # GENERATE RANDOM TWISTS AND THUS
-      # ESCAPE THE PREDIFINED CYLE PATH
-      #rand_value = time.clock() % 0.3
-      #if rand_value > 0.28:
-          #print "RANDOM = ", rand_value
-          #angular = MAX_SPEED
-
-      #print round(linear, 2),  round(l_angular,2) , round(r_angular,2), round(angular, 2)
-      #self.print_velocities = True
 
       ##########################################################################
       return [linear, angular]
@@ -167,39 +123,20 @@ class RobotController:
       self.linear_velocity  = 0
       self.angular_velocity = 0
 
+
       if self.move_with_target == True:
         [l_goal, a_goal] = self.navigation.velocitiesToNextSubtarget()
         ############################### NOTE QUESTION ############################
         # You must combine the two sets of speeds. You can use motor schema,
         # subsumption of whatever suits your better.
 
-        # MOTOR SCHEMA IMPLEMENTATION
-        PI = 3.14
+        # Motor schema for the final velocities
+        c_l = 0.2
+        c_a = 0.1
 
-        scan = self.laser_aggregation.laser_scan
-        resolution = (3*PI/2) / len(scan) # 3*pi/2 = 270
-        lin_obs = 0
-        ang_obs = 0
+        self.linear_velocity = l_goal + c_l * l_laser
+        self.angular_velocity = a_goal + c_a * a_laser
 
-        for i,j in enumerate(scan):
-            if resolution * i >= 3 * PI / 4:
-                theta = resolution * i - 3 * PI / 4
-            elif resolution * i < 3 * PI / 4:
-                theta = resolution * i + 5 * PI / 4
-
-            lin_obs += math.cos(theta) / j ** 2
-            ang_obs += math.sin(theta) / j ** 2
-
-            print j
-
-        #lin_obs *= -1
-        #ang_obs *= -1
-
-        # @JOHN : Motor schema produces extremely high speeds on lin_obs / ang_obs
-
-        print lin_obs, ang_obs
-        self.linear_velocity = 0.9 * l_goal + 0.1 * l_laser
-        self.angular_velocity = 0.9 * a_goal + 0.1 * a_laser
         ##########################################################################
       else:
         ############################### NOTE QUESTION ############################
@@ -208,7 +145,6 @@ class RobotController:
         self.linear_velocity = l_laser
         self.angular_velocity = a_laser
         pass
-
         ##########################################################################
 
     # Assistive functions

@@ -349,7 +349,7 @@ class Navigation:
                         linear = 0
 
 
-            print linear, angular
+            #print linear, angular
 
         ######################### NOTE: QUESTION  ##############################
 
