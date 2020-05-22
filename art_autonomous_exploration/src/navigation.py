@@ -105,6 +105,21 @@ class Navigation:
           # Check if the final subtarget has been approached
           if self.next_subtarget == len(self.subtargets):
             self.target_exists = False
+        else:
+          # Find the next subtarget with the minimum distance
+          min = dist # minimum distance from a next subtarget
+          jump_to_next_subtarget = self.next_subtarget # the number of the next subtarget to jump to
+          next_check = self.next_subtarget + 1 # next subtarget to be checked
+          for i in range(self.next_subtarget+1, len(self.subtargets)):
+              temp_dist = math.hypot(\
+                  rx - self.subtargets[next_check][0], \
+                  ry - self.subtargets[next_check][1])
+              if temp_dist < min:
+                  min = temp_dist
+                  jump_to_next_subtarget = i
+              next_check += 1
+          self.next_subtarget = jump_to_next_subtarget
+          self.counter_to_next_sub = self.count_limit
         ########################################################################
 
         # Publish the current target
@@ -281,36 +296,6 @@ class Navigation:
             st_x = self.subtargets[self.next_subtarget][0]
             st_y = self.subtargets[self.next_subtarget][1]
 
-            #print self.next_subtarget
-            ''' ============== 1ST IMPLEMENTATION ===============
-
-            st_x_rel = st_x - rx
-            st_y_rel = st_y - ry
-
-            st_th = math.atan2(st_y_rel,  st_x_rel)
-
-            #print st_th * 180 / 3.14, theta * 180 / 3.14
-
-            # need to fix boundary condition -0.001 <-> + 0.001 - instabillity
-            angular = st_th - theta
-            linear = 3.14 - abs(angular)
-            linear = 0.3 * linear / 3.14
-
-            if angular > 0.3:
-                angular = 0.3
-            elif angular < -0.3:
-                angular = -0.3
-
-            #print st_th - theta
-            if abs(st_th - theta) * 180 / 3.14 > 15:
-                linear = 0.0
-                if self.next_subtarget == 1:
-                    linear = 0
-
-            print abs(st_th - theta) * 180 / 3.14, linear
-            '''
-
-            # ======= 2ND  IMPLEMENTATION ===========
             PI = 3.14
             MAX_SPEED = 0.3
 
@@ -336,21 +321,7 @@ class Navigation:
             elif angular < -0.3:
                 angular = -0.3
 
-            linear = ((1 - abs(angular)) ** 15 ) * MAX_SPEED
-
-            if self.next_subtarget == 1:
-                if delta > 0:
-                    if delta > PI/10:
-                        angular = 0.2
-                        linear = 0
-                elif delta < 0:
-                    if delta < -PI/10:
-                        angular = -0.2
-                        linear = 0
-
-
-            #print linear, angular
-
+            linear = ((1 - abs(angular)) ** 10 ) * MAX_SPEED
         ######################### NOTE: QUESTION  ##############################
 
 
