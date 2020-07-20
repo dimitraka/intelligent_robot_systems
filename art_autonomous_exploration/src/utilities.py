@@ -39,12 +39,16 @@ class Cffi:
       for i in range(len(y)):
         yi[i] = ffi.cast("int *", y[i].ctypes.data)
 
-      br_c = lib.brushfireFromObstacles(xi, yi, len(x), len(x[0]), 
+      br_c = lib.brushfireFromObstacles(xi, yi, len(x), len(x[0]),
           ogml['min_x'], ogml['max_x'], ogml['min_y'], ogml['max_y'])
-      # TODO: Must be faster!
-      for i in range(ogm.shape[0]):
-        for j in range(ogm.shape[1]):
-          brush[i][j] = yi[i][j]
+      # # TODO: Must be faster!
+      # for i in range(ogm.shape[0]):
+      #   for j in range(ogm.shape[1]):
+      #     brush[i][j] = yi[i][j]
+      #
+      # Extra challenge #2
+      # Optimize targer selection calculations
+      brush[:ogm.shape[0], :ogm.shape[1]] = np.array(y)
 
       return brush
 
@@ -69,6 +73,12 @@ class Cffi:
       for i in range(skeleton.shape[0]):
         for j in range(skeleton.shape[1]):
           skeleton[i][j] = yi[i][j]
+
+      # Extra Challenge #2
+      # Optimize target selection calculations
+      # itime = time.time()
+      # skeleton = np.array(y)
+
       Print.art_print("Skeletonization final copy: " + str(time.time() - itime), Print.BLUE)
       return skeleton
 
@@ -87,7 +97,7 @@ class Cffi:
 
       br_c = lib.prune(xi, yi, len(x), len(x[0]),
           ogml['min_x'], ogml['max_x'], ogml['min_y'], ogml['max_y'], iterations)
-      
+
       # TODO: Must be faster!
       for i in range(skeleton.shape[0]):
         for j in range(skeleton.shape[1]):
@@ -118,7 +128,7 @@ class OgmOperations:
       min_y = origin['y'] / resolution
       max_x = origin['x'] / resolution
       max_y = origin['y'] / resolution
-      
+
       x = ogm.shape[0]
       y = ogm.shape[1]
 
@@ -175,15 +185,15 @@ class OgmOperations:
                     min_y * resolution + origin['y']
                 ],
                 [
-                    max_x * resolution + origin['x'], 
+                    max_x * resolution + origin['x'],
                     min_y * resolution + origin['y']
                 ],
                 [
-                    max_x * resolution + origin['x'], 
+                    max_x * resolution + origin['x'],
                     max_y * resolution + origin['y']
                 ],
                 [
-                    min_x * resolution + origin['x'], 
+                    min_x * resolution + origin['x'],
                     max_y * resolution + origin['y']
                 ]
             ],\
@@ -197,9 +207,9 @@ class OgmOperations:
 
 
       return {
-          'min_x': min_x, 
-          'max_x': max_x, 
-          'min_y': min_y, 
+          'min_x': min_x,
+          'max_x': max_x,
+          'min_y': min_y,
           'max_y': max_y
           }
 
@@ -272,4 +282,3 @@ class RvizHandler:
 
 
         RvizHandler.markers_publisher.publish(markers)
-

@@ -44,30 +44,26 @@ class TargetSelection:
         # Find only the useful boundaries of OGM. Only there calculations
         # have meaning
         ogm_limits = OgmOperations.findUsefulBoundaries(init_ogm, origin, resolution)
-        #print "ogm_limits", ogm_limits
+
         # Blur the OGM to erase discontinuities due to laser rays
         ogm = OgmOperations.blurUnoccupiedOgm(init_ogm, ogm_limits)
-        #print "ogm", ogm
 
         # Calculate Brushfire field
         tinit = time.time()
         brush = self.brush.obstaclesBrushfireCffi(ogm, ogm_limits)
         Print.art_print("Brush time: " + str(time.time() - tinit), Print.ORANGE)
-        #print "brush", brush
 
         # Calculate skeletonization
         tinit = time.time()
         skeleton = self.topo.skeletonizationCffi(ogm, \
                    origin, resolution, ogm_limits)
         Print.art_print("Skeletonization time: " + str(time.time() - tinit), Print.ORANGE)
-        #print "skeleton", skeleton
 
         # Find topological graph
         tinit = time.time()
         nodes = self.topo.topologicalNodes(ogm, skeleton, coverage, origin, \
                 resolution, brush, ogm_limits)
         Print.art_print("Topo nodes time: " + str(time.time() - tinit), Print.ORANGE)
-        #print "nodes", nodes
 
         # Visualization of topological nodes
         vis_nodes = []
@@ -88,38 +84,66 @@ class TargetSelection:
 
         # SMART TARGET SELECTION USING:
         # 1. Brush-fire field
-        # 2. OMG Skeleton
+        # 2. OGM Skeleton
         # 3. Topological Nodes
         # 4. Coverage field
-        max_brush = -999
-        min_dist = 999
+        # 5. OGM Limits
+
+        # Next subtarget is selected based on a
+        # weighted-calculated score for each node. The score
+        # is calculated using normalized values of the brush
+        # field and the number of branches. The weight values
+        # are defined experimentaly through the tuning method.
+        temp_score = 0
+        max_score = 0
+        best_node = nodes[0]
+
+        # the max-min boundaries are set arbitarily
+        BRUSH_MAX = 17
+        BRUSH_MIN = 1
+        BRUSH_WEIGHT = 2.5
+        BRANCH_MAX = 10
+        BRANCH_MIN = 0
+        BRANCH_WEIGHT = 2.5
+        DISTANCE_MIN = 0
+        DISTANCE_MAX = 40
+        DISTANCE_WEIGHT = 0.5
+
         for n in nodes:
 
-            # Find the node with max brush value ->
-            # which tends to have max distance from the obstacles
-            if brush[n[0]][n[1]] > max_brush:
-                max_brush = brush[n[0]][n[1]]
-                brush_x = n[0]
-                brush_y = n[1]
+            # Use brushfire to increase temp_score
+            temp_score = (brush[n[0]][n[1]] - BRUSH_MIN) / (BRUSH_MAX - BRUSH_MIN) * BRUSH_WEIGHT
 
-            # Use OMG Skeleton to find potential
+            # Use OGM Skeleton to find potential
             # branches following the target
             branches = 0
             for i in range(-1,2):
                 for j in range(-1,2):
                     if (i != 0 or j != 0):
-                        branches += skeleton[brush_x+i][brush_y+j]
-            # If branches >= 2 --> path continues beyond the target
-            if branches >= 2:
-                final_x = brush_x
-                final_y = brush_y
+                        branches += skeleton[n[0]+i][n[1]+j]
 
+            # Use OGM-Skeleton to increase temp_score (select a goal with more future options)
+            temp_score += (branches - BRANCH_MIN) / (BRANCH_MAX - BRUSH_MIN) * BRANCH_WEIGHT
 
+            # Use OGM-Limits to decrease temp_score
+            # the goal closest to OGM limits is best exploration option
+            distance = math.sqrt((ogm_limits['max_x'] - n[0]) ** 2 + (ogm_limits['max_y'] - n[1]) ** 2)
+            temp_score -= (distance - DISTANCE_MIN) / (DISTANCE_MAX - DISTANCE_MIN) * DISTANCE_WEIGHT
+
+            # If temp_score is higher than current max
+            # score, then max score is updated and current node
+            # becomes next goal - target
+            if temp_score > max_score:
+                max_score = temp_score
+                best_node = n
+
+        final_x = best_node[0]
+        final_y = best_node[1]
         target = [final_x, final_y]
 
         # Random point
-        #if self.method == 'random' or force_random == True:
-        #  target = self.selectRandomTarget(ogm, coverage, brush, ogm_limits)
+        # if self.method == 'random' or force_random == True:
+        #     target = self.selectRandomTarget(ogm, coverage, brush, ogm_limits)
         ########################################################################
 
         return target

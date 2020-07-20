@@ -215,6 +215,25 @@ class Navigation:
         # Reverse the path to start from the robot
         self.path = self.path[::-1]
 
+        #########################################
+        # Extra challenge #1
+        # A. Smooth path planner
+        if len(self.path) > 3:
+            x = np.array(self.path)
+            y = np.copy(x)
+            a = 0.5
+            b = 0.1
+
+            # FORMULA : y_i = y_i + a * (x_i - y_i) + b * (y_i+1 - 2 * y_i + y_i+1)
+
+            epsilon = np.sum(np.abs(a * (x[1:-1, :] - y[1:-1, :]) + b * (y[2:, :] - 2*y[1:-1, :] + y[:-2, :])))
+            while epsilon > 1e-3:
+                y[1:-1, :] += a * (x[1:-1, :] - y[1:-1, :]) + b * (y[2:, :] - 2*y[1:-1, :] + y[:-2, :])
+                epsilon = np.sum(np.abs(a * (x[1:-1, :] - y[1:-1, :]) + b * (y[2:, :] - 2*y[1:-1, :] + y[:-2, :])))
+
+            # Copy the smoother path
+            self.path = y.tolist()
+
         # Break the path to subgoals every 2 pixels (1m = 20px)
         step = 1
         n_subgoals = (int) (len(self.path)/step)
@@ -230,6 +249,7 @@ class Navigation:
         # optimal in length but 1) not smooth and 2) length optimality
         # may not be desired for coverage-based exploration
         ########################################################################
+
 
         self.counter_to_next_sub = self.count_limit
 
