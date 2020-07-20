@@ -74,11 +74,6 @@ class Cffi:
         for j in range(skeleton.shape[1]):
           skeleton[i][j] = yi[i][j]
 
-      # Extra Challenge #2
-      # Optimize target selection calculations
-      # itime = time.time()
-      # skeleton = np.array(y)
-
       Print.art_print("Skeletonization final copy: " + str(time.time() - itime), Print.BLUE)
       return skeleton
 
@@ -100,8 +95,8 @@ class Cffi:
 
       # TODO: Must be faster!
       for i in range(skeleton.shape[0]):
-        for j in range(skeleton.shape[1]):
-          skeleton[i][j] = yi[i][j]
+         for j in range(skeleton.shape[1]):
+           skeleton[i][j] = yi[i][j]
       Print.art_print("Pruning time: " + str(time.time() - itime), Print.BLUE)
       return skeleton
 
